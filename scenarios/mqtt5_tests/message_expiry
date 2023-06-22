@@ -95,7 +95,6 @@ class CheckApp(object):
         sub_client.loop_start()
         print("Subscribe to topic at 1 qos")
         sub_client.subscribe(TOPIC, qos=1)
-        # time.sleep(2)
 
         pub_client.connect(hostname, port, properties=connect_props)
         msg_out1="Testing message expiry interval - Non-expired message"
@@ -104,15 +103,15 @@ class CheckApp(object):
         message_expiry = 20
         publish_properties.MessageExpiryInterval = message_expiry
         pub_client.publish(TOPIC, msg_out1, qos=1, properties=publish_properties)
-        print("waiting 5 seconds= ")
-        time.sleep(5)
+        print("waiting 2 seconds to receive message")
+        time.sleep(2)
 
         if len(messages)==0:
-            print("test failed")
+            print("Non-expired message not received: test failed")
         else:
             msg=messages.pop()
             if msg==msg_out1:
-                print("test succeeded")
+                print("Non-expired message received: test succeeded")
         print("Publishing client disconnecting")
         pub_client.disconnect()
         print("Subscribe client loop stop")
@@ -123,28 +122,42 @@ class CheckApp(object):
 
         # Part 2 - Expired message
 
-        pub_client.connect(hostname, port, clean_start=False, properties=connect_props)
-        print("Subscriber connecting - should not receive message due to expiry")
+        connect_props = Properties(PacketTypes.CONNECT)
+        print("Subscriber connecting expect to not receive message")
         sub_client.connect(hostname,clean_start=False,properties=connect_props)
+        print("Subscriber client loop start")
         sub_client.loop_start()
         print("Subscribe to topic at 1 qos")
         sub_client.subscribe(TOPIC, qos=1)
+        time.sleep(2)
         
-        msg_out1="Testing message expire interval - Expired message"
+        print("sub_client Disconnecting")
+        sub_client.disconnect()
+        sub_client.loop_stop()
+
+        print("Pub_client Connecting and will publish while receiver disconnected")
+        pub_client.connect(hostname, port, properties=connect_props)
+        msg_out1="Testing message expiry interval - Expired message"
         print("Publishing messages with message expiry")
         publish_properties = Properties(PacketTypes.PUBLISH)
         message_expiry = 20
         publish_properties.MessageExpiryInterval = message_expiry
         pub_client.publish(TOPIC, msg_out1, qos=1, properties=publish_properties)
-        print("waiting 25 seconds= ")
-        time.sleep(25)
-        
+        time.sleep(21)
+
+        print("Subscriber connecting expect to not receive message")
+        sub_client.connect(hostname,clean_start=False,properties=connect_props)
+        print("Subscriber client loop start")
+        sub_client.loop_start()
+        print("waiting 2 seconds to receive expired message")
+        time.sleep(20)
+
         if len(messages)==0:
-            print("test succeeded")
+            print("Expired message not received: test succeeded")
         else:
             msg=messages.pop()
             if msg==msg_out1:
-                print("test failed")
+                print("Expired message not received: test failed")
         sub_client.loop_stop()
         sub_client.disconnect()
         pub_client.disconnect()
